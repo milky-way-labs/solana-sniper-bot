@@ -41,7 +41,7 @@ async function buy() {
         }
 
         log(`Buy tx failed, try: ${i + 1}/${BUY_MAX_RETRIES}.`);
-        if (i + 1 < SELL_MAX_RETRIES) {
+        if (i + 1 < BUY_MAX_RETRIES) {
             log(`Retrying...`);
             await new Promise(resolve => setTimeout(resolve, BUY_RETRY_DELAY));
         }
