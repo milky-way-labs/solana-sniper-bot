@@ -80,6 +80,12 @@ async function swap(connection: Connection, direction: 'buy' | 'sell') {
         )
     ).json();
 
+    console.log(`1@@@@@@@@@@@@@https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}
+&outputMint=${outputMint}
+&amount=${amount}
+&slippageBps=${MAX_SLIPPAGE}`);
+    console.log(`2@@@@@@@@@@@@@${JSON.stringify(quoteResponse)}`);
+
     const {swapTransaction} = await (
         await fetch('https://quote-api.jup.ag/v6/swap', {
             method: 'POST',
@@ -99,6 +105,8 @@ async function swap(connection: Connection, direction: 'buy' | 'sell') {
         })
     ).json();
 
+    console.log(`3@@@@@@@@@@@@@${JSON.stringify(swapTransaction)}`);
+
     // deserialize the transaction
     const swapTransactionBuf = Buffer.from(swapTransaction, 'base64');
     var transaction = VersionedTransaction.deserialize(swapTransactionBuf);
@@ -110,11 +118,13 @@ async function swap(connection: Connection, direction: 'buy' | 'sell') {
     const latestBlockHash = await connection.getLatestBlockhash();
 
     // Execute the transaction
-    const rawTransaction = transaction.serialize()
+    const rawTransaction = transaction.serialize();
     const txid = await connection.sendRawTransaction(rawTransaction, {
         skipPreflight: true,
         maxRetries: 2
     });
+
+    console.log(`4@@@@@@@@@@@@@${txid}`);
 
     const confirmation = await connection.confirmTransaction({
         blockhash: latestBlockHash.blockhash,
@@ -122,10 +132,13 @@ async function swap(connection: Connection, direction: 'buy' | 'sell') {
         signature: txid
     });
 
+    console.log(`5@@@@@@@@@@@@@${JSON.stringify(confirmation)}`);
+
     return confirmation.value.err === null;
 }
 
 export {
     buy,
     sell,
+    swap,
 };

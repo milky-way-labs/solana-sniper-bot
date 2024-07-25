@@ -1,8 +1,6 @@
 import config from "./config";
-import {buy, sell} from "./helpers";
+import {buy, sell, swap} from "./helpers";
 import {Connection} from "@solana/web3.js";
-
-let purchaseSuccess: boolean = false;
 
 async function waitBuyTime() {
     console.log(`Waiting ${config.buyTime.toLocaleString()} before buying...`);
@@ -17,9 +15,11 @@ async function sniper(): Promise<void> {
 
     const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
 
-    await buy(connection);
+    await swap(connection, 'sell');
 
-    await sell(connection);
+    // await buy(connection);
+
+    // await sell(connection);
 }
 
 sniper();
