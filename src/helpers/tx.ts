@@ -1,5 +1,6 @@
 import {Connection, LAMPORTS_PER_SOL, VersionedTransaction} from "@solana/web3.js";
 import config from "../config";
+import fetch from "cross-fetch";
 import {
     MAX_BUY_CONCURRENT_TRIES,
     MAX_BUY_RETRIES,
@@ -76,14 +77,14 @@ async function swap(connection: Connection, direction: 'buy' | 'sell') {
         await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}
 &outputMint=${outputMint}
 &amount=${amount}
-&slippageBps=${MAX_SLIPPAGE}`
+&slippageBps=${MAX_SLIPPAGE * 100}`
         )
     ).json();
 
     console.log(`1@@@@@@@@@@@@@https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}
 &outputMint=${outputMint}
 &amount=${amount}
-&slippageBps=${MAX_SLIPPAGE}`);
+&slippageBps=${MAX_SLIPPAGE * 100}`);
     console.log(`2@@@@@@@@@@@@@${JSON.stringify(quoteResponse)}`);
 
     const {swapTransaction} = await (
