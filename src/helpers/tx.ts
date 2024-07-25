@@ -1,6 +1,7 @@
 import config from "../config";
 import {MAX_SLIPPAGE, USDC_TOKEN_ADDRESS} from "../constants";
 import {SolanaTracker} from "solana-swap";
+import {log} from "./log";
 
 async function swap(direction: 'buy' | 'sell') {
     const solanaTracker = new SolanaTracker(
@@ -18,7 +19,7 @@ async function swap(direction: 'buy' | 'sell') {
     );
 
     try {
-        console.log('Performing swap...');
+        log('Performing swap...');
 
         const txid = await solanaTracker.performSwap(swapResponse, {
             sendOptions: {skipPreflight: true},
@@ -31,7 +32,7 @@ async function swap(direction: 'buy' | 'sell') {
             skipConfirmationCheck: false // Set to true if you want to skip confirmation checks and return txid immediately
         });
 
-        console.log('Swap successful.');
+        log('Swap successful.');
 
         return true;
     } catch (error: any) {

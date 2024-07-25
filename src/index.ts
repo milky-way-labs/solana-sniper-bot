@@ -1,9 +1,14 @@
 import config from "./config";
-import {BUY_TIME_CHECK_INTERVAL, MAX_BUY_CONCURRENT_TRIES, MAX_BUY_RETRIES, MAX_SELL_RETRIES} from "./constants";
-import {swap} from "./helpers";
+import {
+    BUY_RETRY_DELAY,
+    BUY_TIME_CHECK_INTERVAL,
+    BUY_MAX_RETRIES,
+    SELL_MAX_RETRIES
+} from "./constants";
+import {log, swap} from "./helpers";
 
 async function waitBuyTime() {
-    console.log(`Waiting ${config.buyTime.toLocaleString()} before buying...`);
+    log(`Waiting ${config.buyTime.toISOString()} before buying...`);
 
     while (new Date() < config.buyTime) {
         await new Promise(resolve => setTimeout(resolve, BUY_TIME_CHECK_INTERVAL));
@@ -11,18 +16,18 @@ async function waitBuyTime() {
 }
 
 async function waitSellDelay() {
-    console.log(`Waiting ${config.sellDelay} ms before selling...`);
+    log(`Waiting ${config.sellDelay} ms before selling...`);
 
     await new Promise(resolve => setTimeout(resolve, config.sellDelay));
 }
 
 async function buy() {
-    console.log(`Executing buy tx...`);
+    log(`Executing buy tx...`);
 
-    for (let i = 0; i < MAX_BUY_RETRIES; i++) {
+    for (let i = 0; i < BUY_MAX_RETRIES; i++) {
         const attempts = [];
 
-        for (let j = 0; j < MAX_BUY_CONCURRENT_TRIES; j++) {
+        for (let j = 0; j < config.buyMaxConcurrentRetries; j++) {
             attempts.push(swap('buy'));
         }
 
@@ -30,14 +35,15 @@ async function buy() {
 
         for (let j = 0; j < results.length; j++) {
             if (results[j]) {
-                console.log('Buy tx executed successfully.');
+                log('Buy tx executed successfully.');
                 return;
             }
         }
 
-        console.log(`Buy tx failed, try: ${i + 1}/${MAX_BUY_RETRIES}.`);
-        if (i + 1 < MAX_SELL_RETRIES) {
-            console.log(`Retrying...`);
+        log(`Buy tx failed, try: ${i + 1}/${BUY_MAX_RETRIES}.`);
+        if (i + 1 < SELL_MAX_RETRIES) {
+            log(`Retrying...`);
+            await new Promise(resolve => setTimeout(resolve, BUY_RETRY_DELAY));
         }
     }
 
@@ -45,25 +51,25 @@ async function buy() {
 }
 
 async function sell() {
-    console.log('Executing sell tx...');
+    log('Executing sell tx...');
 
-    for (let i = 0; i < MAX_SELL_RETRIES; i++) {
+    for (let i = 0; i < SELL_MAX_RETRIES; i++) {
         try {
             if (await swap('sell')) {
-                console.log('Sell tx executed successfully.');
+                log('Sell tx executed successfully.');
                 return;
             }
 
-            console.log(`Sell tx failed, try: ${i + 1}/${MAX_SELL_RETRIES}.`);
-            if (i + 1 < MAX_SELL_RETRIES) {
-                console.log(`Retrying...`);
+            log(`Sell tx failed, try: ${i + 1}/${SELL_MAX_RETRIES}.`);
+            if (i + 1 < SELL_MAX_RETRIES) {
+                log(`Retrying...`);
             }
         } catch (error) {
             console.error("Unexpected error:", error);
 
-            console.log(`Sell tx failed, try: ${i + 1}/${MAX_SELL_RETRIES}.`);
-            if (i + 1 < MAX_SELL_RETRIES) {
-                console.log(`Retrying...`);
+            log(`Sell tx failed, try: ${i + 1}/${SELL_MAX_RETRIES}.`);
+            if (i + 1 < SELL_MAX_RETRIES) {
+                log(`Retrying...`);
             }
         }
     }

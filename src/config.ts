@@ -7,6 +7,7 @@ interface Config {
     tokenAddress: string;
     buyTime: Date;
     buyAmount: number;
+    buyMaxConcurrentRetries: number,
     sellDelay: number,
 }
 
@@ -23,6 +24,7 @@ const config: Config = {
     tokenAddress: process.env.TOKEN_ADDRESS as string,
     buyTime: new Date(process.env.BUY_TIME as string),
     buyAmount: Number(process.env.BUY_AMOUNT as string),
+    buyMaxConcurrentRetries: Number(process.env.BUY_MAX_CONCURRENT_RETRIES),
     sellDelay: Number(process.env.SELL_DELAY as string),
 };
 

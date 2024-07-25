@@ -1,0 +1,17 @@
+#!/bin/bash
+
+errors_flag=false
+
+for arg in "$@"
+do
+  if [[ "$arg" == "--errors" ]]; then
+    errors_flag=true
+    break
+  fi
+done
+
+if $errors_flag; then
+  pm2 logs --lines 1000 --err --nostream
+else
+  pm2 logs --lines 1000 --out --nostream
+fi
