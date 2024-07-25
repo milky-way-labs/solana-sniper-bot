@@ -1,21 +1,29 @@
 import 'dotenv/config';
-import {Keypair} from "@solana/web3.js";
 import {getWallet} from "./helpers";
+import {Wallet} from "@project-serum/anchor";
 
 interface Config {
-    wallet: Keypair;
+    wallet: Wallet;
     tokenAddress: string;
     buyTime: Date;
     buyAmount: number;
     sellDelay: number,
 }
 
+function getPrivateKey(): string {
+    if (!process.env.PRIVATE_KEY) {
+        throw new Error;
+    }
+
+    return process.env.PRIVATE_KEY.trim();
+}
+
 const config: Config = {
-    wallet: getWallet(process.env.PRIVATE_KEY.trim()),
+    wallet: getWallet(getPrivateKey()),
     tokenAddress: process.env.TOKEN_ADDRESS as string,
     buyTime: new Date(process.env.BUY_TIME as string),
-    buyAmount: process.env.BUY_AMOUNT as number,
-    sellDelay: process.env.SELL_DELAY as number,
+    buyAmount: Number(process.env.BUY_AMOUNT as string),
+    sellDelay: Number(process.env.SELL_DELAY as string),
 };
 
 export default config;

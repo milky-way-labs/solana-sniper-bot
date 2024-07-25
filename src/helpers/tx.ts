@@ -1,14 +1,5 @@
-import {
-    BlockhashWithExpiryBlockHeight,
-    Connection,
-    LAMPORTS_PER_SOL,
-    PublicKey,
-    sendAndConfirmTransaction,
-    SystemProgram,
-    Transaction
-} from "@solana/web3.js";
+import {Connection, LAMPORTS_PER_SOL, VersionedTransaction} from "@solana/web3.js";
 import config from "../config";
-import axios from "axios";
 import {
     MAX_BUY_CONCURRENT_TRIES,
     MAX_BUY_RETRIES,
@@ -16,23 +7,6 @@ import {
     MAX_SLIPPAGE,
     USDC_TOKEN_ADDRESS
 } from "../constants";
-
-async function isTransactionConfirmed(connection: Connection, signature: string, latestBlockhash: BlockhashWithExpiryBlockHeight) {
-    try {
-        const confirmation = await connection.confirmTransaction(
-            {
-                signature,
-                lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-                blockhash: latestBlockhash.blockhash,
-            },
-            'confirmed'
-        );
-
-        return confirmation.value.err === null;
-    } catch (error) {
-        return false;
-    }
-}
 
 async function buy(connection: Connection) {
     console.log(`Executing buy tx...`);
@@ -94,42 +68,61 @@ async function sell(connection: Connection) {
 }
 
 async function swap(connection: Connection, direction: 'buy' | 'sell') {
-    async function fetchSwapRoute(inputMint, outputMint, amount) {
-        const response = await axios.get('https://quote-api.jup.ag/v1/quote', {
-            params: {
-                inputMint,
-                outputMint,
-                amount,
-                slippage: MAX_SLIPPAGE,
-            }
-        });
-        return response.data;
-    }
-
     const inputMint = direction === 'buy' ? USDC_TOKEN_ADDRESS : config.tokenAddress;
     const outputMint = direction === 'buy' ? config.tokenAddress : USDC_TOKEN_ADDRESS;
     const amount = config.buyAmount * LAMPORTS_PER_SOL;
 
-    const {data: {routes}} = await fetchSwapRoute(inputMint, outputMint, amount);
+    const quoteResponse = await (
+        await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}
+&outputMint=${outputMint}
+&amount=${amount}
+&slippageBps=${MAX_SLIPPAGE}`
+        )
+    ).json();
 
-    if (routes && routes.length > 0) {
-        const swapRoute = routes[0];
-
-        const latestBlockhash = await this.connection.getLatestBlockhash();
-
-        const transaction = new Transaction().add(
-            SystemProgram.transfer({
-                fromPubkey: config.wallet.publicKey,
-                toPubkey: new PublicKey(swapRoute.outAmount),
-                lamports: amount,
+    const {swapTransaction} = await (
+        await fetch('https://quote-api.jup.ag/v6/swap', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                // quoteResponse from /quote api
+                quoteResponse,
+                // user public key to be used for the swap
+                userPublicKey: config.wallet.publicKey.toString(),
+                // auto wrap and unwrap SOL. default is true
+                wrapAndUnwrapSol: true,
+                // feeAccount is optional. Use if you want to charge a fee.  feeBps must have been passed in /quote API.
+                // feeAccount: "fee_account_public_key"
             })
-        );
+        })
+    ).json();
 
-        const signature = await sendAndConfirmTransaction(connection, transaction, [config.wallet]);
-        return isTransactionConfirmed(connection, signature, latestBlockhash);
-    } else {
-        return false;
-    }
+    // deserialize the transaction
+    const swapTransactionBuf = Buffer.from(swapTransaction, 'base64');
+    var transaction = VersionedTransaction.deserialize(swapTransactionBuf);
+
+    // sign the transaction
+    transaction.sign([config.wallet.payer]);
+
+    // get the latest block hash
+    const latestBlockHash = await connection.getLatestBlockhash();
+
+    // Execute the transaction
+    const rawTransaction = transaction.serialize()
+    const txid = await connection.sendRawTransaction(rawTransaction, {
+        skipPreflight: true,
+        maxRetries: 2
+    });
+
+    const confirmation = await connection.confirmTransaction({
+        blockhash: latestBlockHash.blockhash,
+        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+        signature: txid
+    });
+
+    return confirmation.value.err === null;
 }
 
 export {
