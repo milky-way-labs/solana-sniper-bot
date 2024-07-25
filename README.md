@@ -19,11 +19,11 @@ npm install -g bun
 ### start
 
 ```shell
-./start
+./scripts/start
 ```
 
 ### stop
 
 ```shell
-./stop
+./scripts/stop
 ```
