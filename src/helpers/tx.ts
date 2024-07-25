@@ -1,145 +1,46 @@
-import {Connection, LAMPORTS_PER_SOL, VersionedTransaction} from "@solana/web3.js";
 import config from "../config";
-import fetch from "cross-fetch";
-import {
-    MAX_BUY_CONCURRENT_TRIES,
-    MAX_BUY_RETRIES,
-    MAX_SELL_RETRIES,
-    MAX_SLIPPAGE,
-    USDC_TOKEN_ADDRESS
-} from "../constants";
+import {MAX_SLIPPAGE, USDC_TOKEN_ADDRESS} from "../constants";
+import {SolanaTracker} from "solana-swap";
 
-async function buy(connection: Connection) {
-    console.log(`Executing buy tx...`);
+async function swap(direction: 'buy' | 'sell') {
+    const solanaTracker = new SolanaTracker(
+        config.wallet,
+        "https://rpc.solanatracker.io/public?advancedTx=true"
+    );
 
-    for (let i = 0; i < MAX_BUY_RETRIES; i++) {
-        const attempts = [];
+    const swapResponse = await solanaTracker.getSwapInstructions(
+        direction === 'buy' ? USDC_TOKEN_ADDRESS : config.tokenAddress,
+        direction === 'buy' ? config.tokenAddress : USDC_TOKEN_ADDRESS,
+        config.buyAmount,
+        MAX_SLIPPAGE,
+        config.wallet.publicKey.toBase58(), // Payer public key
+        0.0005, // Priority fee (Recommended while network is congested)
+    );
 
-        for (let j = 0; j < MAX_BUY_CONCURRENT_TRIES; j++) {
-            attempts.push(swap(connection, 'buy'));
-        }
+    try {
+        console.log('Performing swap...');
 
-        const results = await Promise.all(attempts);
+        const txid = await solanaTracker.performSwap(swapResponse, {
+            sendOptions: {skipPreflight: true},
+            confirmationRetries: 30,
+            confirmationRetryTimeout: 500,
+            lastValidBlockHeightBuffer: 150,
+            resendInterval: 1000,
+            confirmationCheckInterval: 1000,
+            commitment: "processed",
+            skipConfirmationCheck: false // Set to true if you want to skip confirmation checks and return txid immediately
+        });
 
-        for (let j = 0; j < results.length; j++) {
-            if (results[j]) {
-                console.log('Buy tx executed successfully.');
-                return;
-            }
-        }
+        console.log('Swap successful.');
 
-        console.log(`Buy tx failed, try: ${i + 1}/${MAX_BUY_RETRIES}.`);
+        return true;
+    } catch (error: any) {
+        const {signature, message} = error;
+        console.error("Error performing swap:", message, signature);
+        return false;
     }
-
-    console.log(`Buy tx failed, no retries left.`);
-    throw new Error();
-}
-
-async function sell(connection: Connection) {
-    console.log(`Waiting ${config.sellDelay} ms before selling...`);
-
-    await new Promise(resolve => setTimeout(resolve, config.sellDelay));
-
-    console.log('Executing sell tx...');
-
-    for (let i = 0; i < MAX_SELL_RETRIES; i++) {
-        try {
-
-            const result = await swap(connection, 'sell');
-
-            if (result) {
-                console.log('Sell tx executed successfully.');
-                return;
-            }
-
-            console.log(`Sell tx failed, try: ${i + 1}/${MAX_SELL_RETRIES}.`);
-            if (i + 1 < MAX_SELL_RETRIES) {
-                console.log(`Retrying...`);
-            }
-        } catch (error) {
-            console.log(`Sell tx failed, try: ${i + 1}/${MAX_SELL_RETRIES}.`);
-            if (i + 1 < MAX_SELL_RETRIES) {
-                console.log(`Retrying...`);
-            }
-        }
-    }
-
-    console.log(`Sell tx failed, no retries left.`);
-    throw new Error();
-}
-
-async function swap(connection: Connection, direction: 'buy' | 'sell') {
-    const inputMint = direction === 'buy' ? USDC_TOKEN_ADDRESS : config.tokenAddress;
-    const outputMint = direction === 'buy' ? config.tokenAddress : USDC_TOKEN_ADDRESS;
-    const amount = config.buyAmount * LAMPORTS_PER_SOL;
-
-    const quoteResponse = await (
-        await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}
-&outputMint=${outputMint}
-&amount=${amount}
-&slippageBps=${MAX_SLIPPAGE * 100}`
-        )
-    ).json();
-
-    console.log(`1@@@@@@@@@@@@@https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}
-&outputMint=${outputMint}
-&amount=${amount}
-&slippageBps=${MAX_SLIPPAGE * 100}`);
-    console.log(`2@@@@@@@@@@@@@${JSON.stringify(quoteResponse)}`);
-
-    const {swapTransaction} = await (
-        await fetch('https://quote-api.jup.ag/v6/swap', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                // quoteResponse from /quote api
-                quoteResponse,
-                // user public key to be used for the swap
-                userPublicKey: config.wallet.publicKey.toString(),
-                // auto wrap and unwrap SOL. default is true
-                wrapAndUnwrapSol: true,
-                // feeAccount is optional. Use if you want to charge a fee.  feeBps must have been passed in /quote API.
-                // feeAccount: "fee_account_public_key"
-            })
-        })
-    ).json();
-
-    console.log(`3@@@@@@@@@@@@@${JSON.stringify(swapTransaction)}`);
-
-    // deserialize the transaction
-    const swapTransactionBuf = Buffer.from(swapTransaction, 'base64');
-    var transaction = VersionedTransaction.deserialize(swapTransactionBuf);
-
-    // sign the transaction
-    transaction.sign([config.wallet.payer]);
-
-    // get the latest block hash
-    const latestBlockHash = await connection.getLatestBlockhash();
-
-    // Execute the transaction
-    const rawTransaction = transaction.serialize();
-    const txid = await connection.sendRawTransaction(rawTransaction, {
-        skipPreflight: true,
-        maxRetries: 2
-    });
-
-    console.log(`4@@@@@@@@@@@@@${txid}`);
-
-    const confirmation = await connection.confirmTransaction({
-        blockhash: latestBlockHash.blockhash,
-        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-        signature: txid
-    });
-
-    console.log(`5@@@@@@@@@@@@@${JSON.stringify(confirmation)}`);
-
-    return confirmation.value.err === null;
 }
 
 export {
-    buy,
-    sell,
     swap,
 };

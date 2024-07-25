@@ -1,9 +1,9 @@
 import 'dotenv/config';
 import {getWallet} from "./helpers";
-import {Wallet} from "@project-serum/anchor";
+import {Keypair} from "@solana/web3.js";
 
 interface Config {
-    wallet: Wallet;
+    wallet: Keypair;
     tokenAddress: string;
     buyTime: Date;
     buyAmount: number;
