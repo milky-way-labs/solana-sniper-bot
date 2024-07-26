@@ -1,5 +1,5 @@
 import config from "../config";
-import {MAX_SLIPPAGE, USDC_TOKEN_ADDRESS} from "../constants";
+import {MAX_SLIPPAGE, SOL_TOKEN_ADDRESS} from "../constants";
 import {SolanaTracker} from "solana-swap";
 import {log} from "./log";
 
@@ -10,12 +10,12 @@ async function swap(direction: 'buy' | 'sell') {
     );
 
     const swapResponse = await solanaTracker.getSwapInstructions(
-        direction === 'buy' ? USDC_TOKEN_ADDRESS : config.tokenAddress,
-        direction === 'buy' ? config.tokenAddress : USDC_TOKEN_ADDRESS,
+        direction === 'buy' ? SOL_TOKEN_ADDRESS : config.tokenAddress,
+        direction === 'buy' ? config.tokenAddress : SOL_TOKEN_ADDRESS,
         config.buyAmount,
         MAX_SLIPPAGE,
         config.wallet.publicKey.toBase58(), // Payer public key
-        0.0005, // Priority fee (Recommended while network is congested)
+        0.002, // Priority fee (Recommended while network is congested)
     );
 
     try {

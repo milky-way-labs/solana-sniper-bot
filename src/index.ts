@@ -1,16 +1,11 @@
 import config from "./config";
-import {
-    BUY_RETRY_DELAY,
-    BUY_TIME_CHECK_INTERVAL,
-    BUY_MAX_RETRIES,
-    SELL_MAX_RETRIES
-} from "./constants";
+import {BUY_DURATION, BUY_RETRY_DELAY, BUY_TIME_CHECK_INTERVAL, SELL_MAX_RETRIES} from "./constants";
 import {log, swap} from "./helpers";
 
 async function waitBuyTime() {
-    log(`Waiting ${config.buyTime.toISOString()} before buying...`);
+    log(`Waiting ${config.buyDateTime.toISOString()} before buying...`);
 
-    while (new Date() < config.buyTime) {
+    while (new Date() < config.buyDateTime) {
         await new Promise(resolve => setTimeout(resolve, BUY_TIME_CHECK_INTERVAL));
     }
 }
@@ -22,32 +17,53 @@ async function waitSellDelay() {
 }
 
 async function buy() {
-    log(`Executing buy tx...`);
-
-    for (let i = 0; i < BUY_MAX_RETRIES; i++) {
+    async function execute() {
         const attempts = [];
 
-        for (let j = 0; j < config.buyMaxConcurrentRetries; j++) {
-            attempts.push(swap('buy'));
-        }
+        if (config.buyMaxConcurrentTransactions > 1) {
+            for (let j = 0; j < config.buyMaxConcurrentTransactions; j++) {
+                attempts.push(swap('buy'));
+            }
 
-        const results = await Promise.all(attempts);
+            const results = await Promise.all(attempts);
 
-        for (let j = 0; j < results.length; j++) {
-            if (results[j]) {
-                log('Buy tx executed successfully.');
+            for (let j = 0; j < results.length; j++) {
+                if (results[j]) {
+                    log('Buy tx successful.');
+                    return;
+                }
+            }
+        } else {
+            if (await swap('buy')) {
+                log('Buy tx successful.');
                 return;
             }
         }
 
-        log(`Buy tx failed, try: ${i + 1}/${BUY_MAX_RETRIES}.`);
-        if (i + 1 < BUY_MAX_RETRIES) {
-            log(`Retrying...`);
-            await new Promise(resolve => setTimeout(resolve, BUY_RETRY_DELAY));
-        }
+        log(`Buy tx failed`);
     }
 
-    throw new Error(`Buy tx failed, no retries left.`);
+    log(`Executing buy tx...`);
+
+    let isFirstTry = true;
+
+    while (new Date().getTime() < config.buyDateTime.getTime() + BUY_DURATION) {
+        if (!isFirstTry) {
+            log(`Retrying...`);
+        }
+
+        try {
+            await execute();
+        } catch (e) {
+            log('Unexpected error: ', e)
+        }
+
+        isFirstTry = false;
+
+        await new Promise(resolve => setTimeout(resolve, BUY_RETRY_DELAY));
+    }
+
+    throw new Error(`Buy time out.`);
 }
 
 async function sell() {

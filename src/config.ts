@@ -5,9 +5,9 @@ import {Keypair} from "@solana/web3.js";
 interface Config {
     wallet: Keypair;
     tokenAddress: string;
-    buyTime: Date;
+    buyDateTime: Date;
     buyAmount: number;
-    buyMaxConcurrentRetries: number,
+    buyMaxConcurrentTransactions: number,
     sellDelay: number,
 }
 
@@ -22,9 +22,9 @@ function getPrivateKey(): string {
 const config: Config = {
     wallet: getWallet(getPrivateKey()),
     tokenAddress: process.env.TOKEN_ADDRESS as string,
-    buyTime: new Date(process.env.BUY_TIME as string),
+    buyDateTime: new Date(process.env.BUY_DATE_TIME as string),
     buyAmount: Number(process.env.BUY_AMOUNT as string),
-    buyMaxConcurrentRetries: Number(process.env.BUY_MAX_CONCURRENT_RETRIES),
+    buyMaxConcurrentTransactions: Number(process.env.BUY_MAX_CONCURRENT_RETRIES),
     sellDelay: Number(process.env.SELL_DELAY as string),
 };
 
