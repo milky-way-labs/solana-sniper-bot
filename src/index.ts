@@ -1,5 +1,5 @@
 import config from "./config";
-import {BUY_DURATION, BUY_RETRY_DELAY, BUY_TIME_CHECK_INTERVAL, SELL_MAX_RETRIES} from "./constants";
+import {BUY_DURATION, BUY_RETRY_DELAY, BUY_TIME_CHECK_INTERVAL} from "./consts";
 import {log, swap} from "./helpers";
 
 async function waitBuyTime() {
@@ -8,12 +8,6 @@ async function waitBuyTime() {
     while (new Date() < config.buyDateTime) {
         await new Promise(resolve => setTimeout(resolve, BUY_TIME_CHECK_INTERVAL));
     }
-}
-
-async function waitSellDelay() {
-    log(`Waiting ${config.sellDelay} ms before selling...`);
-
-    await new Promise(resolve => setTimeout(resolve, config.sellDelay));
 }
 
 async function buy() {
@@ -64,33 +58,6 @@ async function buy() {
     }
 
     throw new Error(`Buy time out.`);
-}
-
-async function sell() {
-    log('Executing sell tx...');
-
-    for (let i = 0; i < SELL_MAX_RETRIES; i++) {
-        try {
-            if (await swap('sell')) {
-                log('Sell tx executed successfully.');
-                return;
-            }
-
-            log(`Sell tx failed, try: ${i + 1}/${SELL_MAX_RETRIES}.`);
-            if (i + 1 < SELL_MAX_RETRIES) {
-                log(`Retrying...`);
-            }
-        } catch (error) {
-            console.error("Unexpected error:", error);
-
-            log(`Sell tx failed, try: ${i + 1}/${SELL_MAX_RETRIES}.`);
-            if (i + 1 < SELL_MAX_RETRIES) {
-                log(`Retrying...`);
-            }
-        }
-    }
-
-    throw new Error(`Sell tx failed, no retries left.`);
 }
 
 async function sniper(): Promise<void> {

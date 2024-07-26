@@ -8,7 +8,6 @@ interface Config {
     buyDateTime: Date;
     buyAmount: number;
     buyMaxConcurrentTransactions: number,
-    sellDelay: number,
 }
 
 function getPrivateKey(): string {
@@ -25,7 +24,6 @@ const config: Config = {
     buyDateTime: new Date(process.env.BUY_DATE_TIME as string),
     buyAmount: Number(process.env.BUY_AMOUNT as string),
     buyMaxConcurrentTransactions: Number(process.env.BUY_MAX_CONCURRENT_RETRIES),
-    sellDelay: Number(process.env.SELL_DELAY as string),
 };
 
 export default config;

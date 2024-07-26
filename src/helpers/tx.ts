@@ -1,5 +1,5 @@
 import config from "../config";
-import {MAX_SLIPPAGE, SOL_TOKEN_ADDRESS} from "../constants";
+import {MAX_SLIPPAGE, SOL_TOKEN_ADDRESS} from "../consts";
 import {SolanaTracker} from "solana-swap";
 import {log} from "./log";
 
