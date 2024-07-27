@@ -28,7 +28,7 @@ async function swap(direction: 'buy' | 'sell') {
             lastValidBlockHeightBuffer: 150,
             resendInterval: 1000,
             confirmationCheckInterval: 1000,
-            commitment: "processed",
+            commitment: "finalized",
             skipConfirmationCheck: false // Set to true if you want to skip confirmation checks and return txid immediately
         });
 
