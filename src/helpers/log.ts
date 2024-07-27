@@ -1,5 +1,5 @@
-function log(message: string, ...args: any[[]]) {
-    console.log(`[${(new Date).toISOString()}] ${message}`, args)
+function log(message: string, ...args: any[]) {
+    console.log(`[${(new Date).toISOString()}] ${message}`, ...args)
 }
 
 export {

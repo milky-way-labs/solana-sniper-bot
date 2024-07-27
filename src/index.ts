@@ -1,6 +1,7 @@
 import config from "./config";
-import {BUY_DURATION, BUY_RETRY_DELAY, BUY_TIME_CHECK_INTERVAL} from "./consts";
+import {BUY_RETRY_DELAY, BUY_TIME_CHECK_INTERVAL} from "./consts";
 import {log, swap} from "./helpers";
+import {SwapFailedError} from "./errors";
 
 async function waitBuyTime() {
     log(`Waiting ${config.buyDateTime.toISOString()} before buying...`);
@@ -12,9 +13,9 @@ async function waitBuyTime() {
 
 async function buy() {
     async function execute() {
-        const attempts = [];
-
         if (config.buyMaxConcurrentTransactions > 1) {
+            const attempts = [];
+
             for (let j = 0; j < config.buyMaxConcurrentTransactions; j++) {
                 attempts.push(swap('buy'));
             }
@@ -23,33 +24,38 @@ async function buy() {
 
             for (let j = 0; j < results.length; j++) {
                 if (results[j]) {
-                    log('Buy tx successful.');
                     return;
                 }
             }
-        } else {
-            if (await swap('buy')) {
-                log('Buy tx successful.');
-                return;
-            }
+        } else if (await swap('buy')) {
+            return;
         }
 
-        log(`Buy tx failed`);
+        throw new SwapFailedError();
     }
 
-    log(`Executing buy tx...`);
+    log(`Executing buy...`);
 
     let isFirstTry = true;
+    const buyStartDateTime = (new Date());
 
-    while (new Date().getTime() < config.buyDateTime.getTime() + BUY_DURATION) {
+    while ((new Date()).getTime() < buyStartDateTime.getTime() + config.buyTimeout) {
         if (!isFirstTry) {
             log(`Retrying...`);
         }
 
         try {
             await execute();
+
+            log('Buy successful.');
+
+            return;
         } catch (e) {
-            log('Unexpected error: ', e)
+            if (e instanceof SwapFailedError) {
+                log(`Buy failed`);
+            } else {
+                log('Unexpected error: ', e)
+            }
         }
 
         isFirstTry = false;
