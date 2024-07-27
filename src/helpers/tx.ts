@@ -14,8 +14,8 @@ async function swap(direction: 'buy' | 'sell') {
         direction === 'buy' ? config.tokenAddress : SOL_TOKEN_ADDRESS,
         config.buyAmount,
         MAX_SLIPPAGE,
-        config.wallet.publicKey.toBase58(), // Payer public key
-        0.002, // Priority fee (Recommended while network is congested)
+        config.wallet.publicKey.toBase58(),
+        0.005, // Priority fee (Recommended while network is congested)
     );
 
     try {
