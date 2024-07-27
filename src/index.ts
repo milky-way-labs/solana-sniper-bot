@@ -17,7 +17,7 @@ async function buy() {
             const attempts = [];
 
             for (let j = 0; j < config.buyMaxConcurrentTransactions; j++) {
-                attempts.push(swap('buy'));
+                attempts.push(swap('buy', config.buyAmount));
             }
 
             const results = await Promise.all(attempts);
@@ -27,7 +27,7 @@ async function buy() {
                     return;
                 }
             }
-        } else if (await swap('buy')) {
+        } else if (await swap('buy', config.buyAmount)) {
             return;
         }
 

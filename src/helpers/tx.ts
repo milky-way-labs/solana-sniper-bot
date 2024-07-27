@@ -3,7 +3,7 @@ import {MAX_SLIPPAGE, SOL_TOKEN_ADDRESS} from "../consts";
 import {SolanaTracker} from "solana-swap";
 import {log} from "./log";
 
-async function swap(direction: 'buy' | 'sell') {
+async function swap(direction: 'buy' | 'sell', amount: Number|string) {
     const solanaTracker = new SolanaTracker(
         config.wallet,
         "https://rpc.solanatracker.io/public?advancedTx=true"
@@ -12,7 +12,7 @@ async function swap(direction: 'buy' | 'sell') {
     const swapResponse = await solanaTracker.getSwapInstructions(
         direction === 'buy' ? SOL_TOKEN_ADDRESS : config.tokenAddress,
         direction === 'buy' ? config.tokenAddress : SOL_TOKEN_ADDRESS,
-        config.buyAmount,
+        amount,
         MAX_SLIPPAGE,
         config.wallet.publicKey.toBase58(),
         0.005, // Priority fee (Recommended while network is congested)
