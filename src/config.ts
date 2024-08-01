@@ -5,6 +5,7 @@ import {Keypair} from "@solana/web3.js";
 interface Config {
     wallet: Keypair;
     tokenAddress: string;
+    birdeyeApiKey: string;
     buyDateTime: Date;
     buyTimeout: number;
     buyAmount: number;
@@ -22,6 +23,7 @@ function getPrivateKey(): string {
 const config: Config = {
     wallet: getWallet(getPrivateKey()),
     tokenAddress: process.env.TOKEN_ADDRESS as string,
+    birdeyeApiKey: process.env.BIRDEYE_API_KEY as string,
     buyDateTime: new Date(process.env.BUY_DATE_TIME as string),
     buyTimeout: Number(process.env.BUY_TIMEOUT as string),
     buyAmount: Number(process.env.BUY_AMOUNT as string),

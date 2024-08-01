@@ -3,7 +3,7 @@ import {MAX_SLIPPAGE, SOL_TOKEN_ADDRESS} from "../consts";
 import {SolanaTracker} from "solana-swap";
 import {log} from "./log";
 
-async function swap(direction: 'buy' | 'sell', amount: Number|string) {
+async function swap(direction: 'buy' | 'sell', amount: number | string): Promise<boolean> {
     const solanaTracker = new SolanaTracker(
         config.wallet,
         "https://rpc.solanatracker.io/public?advancedTx=true"
@@ -18,9 +18,9 @@ async function swap(direction: 'buy' | 'sell', amount: Number|string) {
         0.005, // Priority fee (Recommended while network is congested)
     );
 
-    try {
-        log('Performing swap...');
+    log('Performing swap...');
 
+    try {
         const txid = await solanaTracker.performSwap(swapResponse, {
             sendOptions: {skipPreflight: true},
             confirmationRetries: 30,
@@ -42,6 +42,38 @@ async function swap(direction: 'buy' | 'sell', amount: Number|string) {
     }
 }
 
+async function checkOpen(): Promise<boolean> {
+    log('Checking if pool is open...');
+
+    try {
+        const response = await fetch(`https://public-api.birdeye.so/defi/price?address=${config.tokenAddress}`, {
+            headers: {
+                "X-API-KEY": config.birdeyeApiKey,
+            },
+        });
+
+        if (response.ok) {
+            const jsonResponse = await response.json();
+
+            if (jsonResponse.data) {
+                log('Pool is open.');
+                return true;
+            } else {
+                log('Pool is closed.');
+                return false;
+            }
+        } else {
+            // noinspection ExceptionCaughtLocallyJS
+            throw new Error(`Failed to fetch data with status code ${response.status}`);
+        }
+    } catch (error: any) {
+        const {message} = error;
+        log("Error checking if pool is open:", message);
+        return false;
+    }
+}
+
 export {
     swap,
+    checkOpen,
 };

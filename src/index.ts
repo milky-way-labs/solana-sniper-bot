@@ -1,9 +1,20 @@
 import config from "./config";
-import {BUY_RETRY_DELAY, BUY_TIME_CHECK_INTERVAL} from "./consts";
-import {log, swap} from "./helpers";
+import {BUY_RETRY_DELAY, BUY_TIME_CHECK_INTERVAL, OPEN_CHECK_INTERVAL} from "./consts";
+import {checkOpen, log, swap} from "./helpers";
 import {SwapFailedError} from "./errors";
 
-async function waitBuyTime() {
+async function waitOpen(): Promise<void> {
+    log(`Waiting until pool is open...`);
+
+    while (true) {
+        if (await checkOpen()) {
+            break;
+        }
+        await new Promise(resolve => setTimeout(resolve, OPEN_CHECK_INTERVAL));
+    }
+}
+
+async function waitBuyTime(): Promise<void> {
     log(`Waiting ${config.buyDateTime.toISOString()} before buying...`);
 
     while (new Date() < config.buyDateTime) {
@@ -11,7 +22,7 @@ async function waitBuyTime() {
     }
 }
 
-async function buy() {
+async function buy(): Promise<void> {
     async function execute() {
         if (config.buyMaxConcurrentTransactions > 1) {
             const attempts = [];
@@ -68,6 +79,8 @@ async function buy() {
 
 async function sniper(): Promise<void> {
     await waitBuyTime();
+
+    await waitOpen();
 
     await buy();
 }
